@@ -115,7 +115,7 @@ class HomeWork2:
         output = self.postfixNotationPrint(head.left)
         output += self.postfixNotationPrint(head.right)
         output += [head.val]
-        
+
         return output
 
 
@@ -129,8 +129,36 @@ class Stack:
     # Use your own stack implementation to solve problem 3
 
     def __init__(self):
-        # TODO: initialize the stack
-        pass
+        self.items = []
+        self.top = -1
+
+    def push(self, item):
+        self.items.append(item)
+        self.top += 1
+
+    def pop(self):
+        # Check empty stack
+        if self.isEmpty():
+            raise IndexError("Stack is empty")
+        
+        item = self.items[self.top]
+        self.items.pop()
+        self.top -= 1
+
+        return item
+
+    def peek(self):
+        # Check empty stack
+        if self.isEmpty():
+            raise IndexError("Stack is empty")
+        
+        return self.items[self.top]
+
+    def isEmpty(self):
+        return self.top == -1
+
+    def size(self):
+        return self.top + 1
 
     # Problem 3: Write code to evaluate a postfix expression using stack and return the integer value
     # Use stack which you implemented above for this problem
@@ -145,9 +173,55 @@ class Stack:
 
     # DO NOT USE EVAL function for evaluating the expression
 
-    def evaluatePostfix(exp: str) -> int:
-        # TODO: implement this using your Stack class
-        pass
+    def evaluatePostfix(self, exp: str) -> int:
+        operators = {'+', '-', '*', '/'}
+
+        # Edge Case: Empty postfix expression
+        if not exp or not exp.strip():
+            raise ValueError("Empty postfix expression")
+
+        # Split the input expression into tokens (space-separated)
+        inputs = exp.split()
+
+        for i in inputs:
+            if i in operators:
+                # Edge Case: Malformed expression (insufficient operands)
+                # Need at least 2 operands for the operators
+                if self.size() < 2:
+                    raise ValueError("Malformed postfix expression: insufficient operands")
+
+                # Pop two operands from the stack
+                b = self.pop()
+                a = self.pop()
+
+                # Perform the operation
+                if i == '+':
+                    result = a + b
+                elif i == '-':
+                    result = a - b
+                elif i == '*':
+                    result = a * b
+                elif i == '/':
+                    # Edge Case: Division by zero
+                    if b == 0:
+                        raise ZeroDivisionError("Division by zero")
+                    result = int(a / b)
+                self.push(result)
+            else:
+                # Edge Case: Invalid tokens (non-numeric operands, unsupported operators)
+                # Edge Case: Negative numbers in the expression
+                # Edge Case: Very large numbers or results
+                try:
+                    self.push(int(i))
+                except ValueError:
+                    raise ValueError(f"Invalid token: '{i}' is not a number or supported operator")
+                
+        # Edge Case: Malformed expression (too many operands)
+        # Exactly one result
+        if self.size() != 1:
+            raise ValueError("Malformed postfix expression: too many operands")
+
+        return self.pop()
 
 
 # Main Function. Do not edit the code below
