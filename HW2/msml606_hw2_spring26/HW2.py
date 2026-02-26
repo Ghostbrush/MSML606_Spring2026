@@ -1,3 +1,14 @@
+# HW2
+# MSML606
+# Author: Chenhongshu Yu
+# UID: 116610971
+
+# Statement: The use of external resources is clearly cited. 
+# If no citation is found for any specific part of my submission, 
+# it means "No external sources were used; all ideas are my own or from course lecture slides".
+
+
+
 import csv
 class TreeNode:
     def __init__(self, val=0, left=None, right=None):
@@ -24,7 +35,25 @@ class HomeWork2:
     #     3   4
 
     def constructBinaryTree(self, input) -> TreeNode:
-        pass
+        operators = {'+', '-', '*', '/'}
+        
+        # Use stack for expression tree construction
+        stack = []
+
+        for i in input:
+            # When find the operator
+            if i in operators:
+                # Pop two operands from the stack
+                right = stack.pop()
+                left = stack.pop()
+                # Create a new tree node with the operator
+                node = TreeNode(i, left, right)
+                stack.append(node)
+            else:
+                stack.append(TreeNode(i))
+
+        # Return the root node
+        return stack.pop()
 
 
 
@@ -34,7 +63,12 @@ class HomeWork2:
     # you can see the examples in p2_traversals.csv
 
     def prefixNotationPrint(self, head: TreeNode) -> list:
-        pass
+        if head is None:
+            return []
+        result = [head.val]
+        result += self.prefixNotationPrint(head.left)
+        result += self.prefixNotationPrint(head.right)
+        return result
 
     # Problem 2.2: Use in-order traversal (left, root, right) for infix notation with appropriate parentheses.
     # return an array of elements of an infix expression
