@@ -62,13 +62,17 @@ class HomeWork2:
     # expected output for the tree from problem 1 is [*,+,3,4,2]
     # you can see the examples in p2_traversals.csv
 
+    # Pre-order traversal (root, left, right)
     def prefixNotationPrint(self, head: TreeNode) -> list:
         if head is None:
             return []
-        result = [head.val]
-        result += self.prefixNotationPrint(head.left)
-        result += self.prefixNotationPrint(head.right)
-        return result
+        
+        output = [head.val]
+        output += self.prefixNotationPrint(head.left)
+        output += self.prefixNotationPrint(head.right)
+
+        return output
+
 
     # Problem 2.2: Use in-order traversal (left, root, right) for infix notation with appropriate parentheses.
     # return an array of elements of an infix expression
@@ -79,8 +83,23 @@ class HomeWork2:
     # even the outermost expression should be wrapped
     # treat parentheses as individual elements in the returned list (see output)
 
+    # In-order traversal (left, root, right) with adding parentheses
     def infixNotationPrint(self, head: TreeNode) -> list:
-        pass
+        if head is None:
+            return []
+        
+        operators = {'+', '-', '*', '/'}
+
+        if head.val in operators:
+            output = ['(']
+            output += self.infixNotationPrint(head.left)
+            output += [head.val]
+            output += self.infixNotationPrint(head.right)
+            output += [')']
+
+            return output
+        else:
+            return [head.val]
 
 
     # Problem 2.3: Use post-order traversal (left, right, root) to generate postfix notation.
@@ -88,8 +107,16 @@ class HomeWork2:
     # expected output for the tree from problem 1 is [3,4,+,2,*]
     # you can see the examples in p2_traversals.csv
 
+    # Post-order traversal (left, right, root)
     def postfixNotationPrint(self, head: TreeNode) -> list:
-        pass
+        if head is None:
+            return []
+        
+        output = self.postfixNotationPrint(head.left)
+        output += self.postfixNotationPrint(head.right)
+        output += [head.val]
+        
+        return output
 
 
 class Stack:
