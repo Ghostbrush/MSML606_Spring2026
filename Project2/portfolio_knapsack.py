@@ -88,5 +88,68 @@ class PortfolioResult:
         ]
         if not returns:
             return None
-        return sum(returns) / len(returns)
+        return (sum(returns) / len(returns))
+
+# Reads the Kaggle CSV file and prepares the clean input data as a dictionary:
+# mapping ticker -> PriceHistory, 
+# where PriceHistory contains all the dates and prices for that stock.
+def load_stock_history(
+        csv_path: Union[str, Path],
+        price_column: str = "Adj Close",
+    ) -> Dict[str, PriceHistory]:
+
+    # Check whether the CSV file exists
+    csv_path = Path(csv_path)
+    if not csv_path.exists():
+        raise FileNotFoundError(
+            f"Could not find {csv_path}. Place SP500_Historical_Data.csv in the project folder."
+        )
+
+    # Use a defaultdict to accumulate dates and prices for each ticker
+    raw: Dict[str, Tuple[List[str], List[float]]] = defaultdict(lambda: ([], []))
+
+    # Read the CSV file and populate the raw dictionary
+    # Checks required columns: Ticker, Date, Adj Close, and Close
+    with csv_path.open(newline="") as file:
+        reader = csv.DictReader(file)
+        required_columns = {"Ticker", "Date", price_column, "Close"}
+        missing = required_columns.difference(reader.fieldnames or [])
+        if missing:
+            missing_text = ", ".join(sorted(missing))
+            raise ValueError(f"CSV file is missing required column(s): {missing_text}")
+
+        # Process each row, extracting ticker, date, and price
+        for row in reader:
+            ticker = row["Ticker"].strip()
+            if not ticker:
+                continue
+
+            price_text = row.get(price_column) or row.get("Close") or ""
+            try:
+                price = float(price_text)
+            except ValueError:
+                continue
+
+            if price <= 0:
+                continue
+
+            dates, prices = raw[ticker]
+            dates.append(row["Date"])
+            prices.append(price)
+
+    # Convert the raw dictionary into the final dictionary
+    history: Dict[str, PriceHistory] = {}
+    for ticker, (dates, prices) in raw.items():
+        if any(dates[i] > dates[i + 1] for i in range(len(dates) - 1)):
+            ordered = sorted(zip(dates, prices), key=lambda item: item[0])
+            dates = [date for date, _ in ordered]
+            prices = [price for _, price in ordered]
+        history[ticker] = PriceHistory(dates=dates, prices=prices)
+
+    return history
+
+# Collects every date that appears in the dataset and returns them sorted
+def all_market_dates(history: Dict[str, PriceHistory]) -> List[str]:
+    return sorted({date for stock in history.values() for date in stock.dates})
+
 
