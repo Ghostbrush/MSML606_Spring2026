@@ -306,3 +306,35 @@ def solve_knapsack_dp(
         total_risk_points=total_risk,
         capacity_points=capacity_points,
     )
+
+# Comparison baseline algorithm - Greedy
+# repeatedly takes the highest value-to-risk stock until the risk budget is exhausted
+def solve_knapsack_greedy(
+        candidates: Sequence[StockCandidate],
+        capacity_points: int,
+    ) -> PortfolioResult:
+
+    if capacity_points <= 0:
+        raise ValueError("capacity_points must be positive.")
+
+    selected: List[StockCandidate] = []
+    total_risk = 0
+
+    ranked = sorted(
+        candidates,
+        key=lambda stock: (stock.value_to_risk, stock.momentum_value),
+        reverse=True,
+    )
+
+    # Select stocks one by one as long as they still fit within the risk budget
+    for stock in ranked:
+        if total_risk + stock.risk_points <= capacity_points:
+            selected.append(stock)
+            total_risk += stock.risk_points
+
+    return PortfolioResult(
+        selected=selected,
+        total_value=sum(stock.momentum_value for stock in selected),
+        total_risk_points=total_risk,
+        capacity_points=capacity_points,
+    )
