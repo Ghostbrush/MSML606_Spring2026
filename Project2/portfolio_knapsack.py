@@ -123,16 +123,16 @@ def load_stock_history(
             ticker = row["Ticker"].strip()
             if not ticker:
                 continue
-
+            
             price_text = row.get(price_column) or row.get("Close") or ""
             try:
                 price = float(price_text)
             except ValueError:
                 continue
-
+            
             if price <= 0:
                 continue
-
+            
             dates, prices = raw[ticker]
             dates.append(row["Date"])
             prices.append(price)
@@ -152,4 +152,18 @@ def load_stock_history(
 def all_market_dates(history: Dict[str, PriceHistory]) -> List[str]:
     return sorted({date for stock in history.values() for date in stock.dates})
 
+# Chooses a recent decision date while still leaving enough future data for evaluation
+def choose_decision_date(
+        history: Dict[str, PriceHistory],
+        future_days: int = 20,
+    ) -> str:
 
+    # Validate future_days and ensure there are enough dates for the decision date
+    dates = all_market_dates(history)
+    if not dates:
+        raise ValueError("No dates were found in the price history.")
+    if future_days < 0:
+        raise ValueError("future_days must be non-negative.")
+    if future_days >= len(dates):
+        raise ValueError("future_days is larger than the available date history.")
+    return dates[-future_days - 1]
