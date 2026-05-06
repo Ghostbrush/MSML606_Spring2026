@@ -167,3 +167,89 @@ def choose_decision_date(
     if future_days >= len(dates):
         raise ValueError("future_days is larger than the available date history.")
     return dates[-future_days - 1]
+
+# Converts raw stock prices into knapsack-ready stock candidates
+def build_candidates(
+        history: Dict[str, PriceHistory],
+        decision_date: str,
+        *,
+        future_days: int = 20,
+        risk_scale: int = 10_000,
+        require_positive_momentum: bool = True,
+        require_future_return: bool = True,
+    ) -> List[StockCandidate]:
+
+    """
+    For each ticker, it:
+    1. Finds the stock's latest available price on or before the decision date.
+    2. Requires at least 20 previous trading days.
+    3. Calculates future return if evaluation is requested.
+    4. Calculates 5-day return.
+    5. Calculates 20-day return.
+    6. Calculates momentum value: 'momentum_value = max(0.0, 0.6 * return_5d + 0.4 * return_20d)'
+    7. Calculates daily returns over the past 20 trading days.
+    8. Calculates volatility from those daily returns.
+    9. Converts volatility into integer risk points: 'risk_points = max(1, math.ceil(volatility * risk_scale))'
+    """
+
+    candidates: List[StockCandidate] = []
+
+    # Check that the decision date is valid for at least some stocks
+    for ticker, stock in history.items():
+        index = bisect_right(stock.dates, decision_date) - 1
+        # We require at least 20 previous trading days to calculate momentum and volatility
+        if index < 20:
+            continue
+        
+        # Calculate the future return if requested, and skip if it's required but not available
+        if future_days > 0 and index + future_days >= len(stock.prices):
+            if require_future_return:
+                continue
+            future_return = None
+        elif future_days > 0:
+            future_return = stock.prices[index + future_days] / stock.prices[index] - 1
+        else:
+            future_return = None
+
+        # Calculate the momentum value based on recent returns, and skip if positive momentum is required but not met
+        price_today = stock.prices[index]
+        return_5d = price_today / stock.prices[index - 5] - 1
+        return_20d = price_today / stock.prices[index - 20] - 1
+        momentum_value = max(0.0, 0.6 * return_5d + 0.4 * return_20d)
+
+        if require_positive_momentum and momentum_value <= 0:
+            continue
+        
+        # Calculate the volatility based on daily returns over the past 20 trading days
+        daily_returns = [
+            stock.prices[day] / stock.prices[day - 1] - 1
+            for day in range(index - 19, index + 1)
+        ]
+        average_daily_return = sum(daily_returns) / len(daily_returns)
+        volatility = math.sqrt(
+            sum((daily_return - average_daily_return) ** 2 for daily_return in daily_returns)
+            / len(daily_returns)
+        )
+
+        # Skip stocks with non-positive volatility, as they would not make sense in the knapsack model
+        if volatility <= 0:
+            continue
+
+        # Convert volatility into integer risk points, ensuring at least 1 risk point
+        risk_points = max(1, math.ceil(volatility * risk_scale))
+        candidates.append(
+            StockCandidate(
+                ticker=ticker,
+                decision_date=stock.dates[index],
+                price=price_today,
+                return_5d=return_5d,
+                return_20d=return_20d,
+                momentum_value=momentum_value,
+                volatility_20d=volatility,
+                risk_points=risk_points,
+                future_return_20d=future_return,
+            )
+        )
+
+    return sorted(candidates, key=lambda stock: stock.ticker)
+
