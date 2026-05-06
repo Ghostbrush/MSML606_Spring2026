@@ -3,3 +3,4 @@ Project2/SP500_Historical_Data.csv
 __pycache__/
 .ipynb_checkpoints/
 .matplotlib-cache/
+.DS_Store
