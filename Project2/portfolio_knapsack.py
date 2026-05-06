@@ -253,3 +253,56 @@ def build_candidates(
 
     return sorted(candidates, key=lambda stock: stock.ticker)
 
+# Main algorithm
+# Solves the 0/1 knapsack problem exactly using dynamic programming (DP)
+def solve_knapsack_dp(
+        candidates: Sequence[StockCandidate],
+        capacity_points: int,
+    ) -> PortfolioResult:
+
+    # Validate capacity_points and ensure it's positive
+    if capacity_points <= 0:
+        raise ValueError("capacity_points must be positive.")
+
+    dp = [0.0] * (capacity_points + 1)
+    keep_rows: List[bytearray] = []
+
+    for stock in candidates:
+        row = bytearray(capacity_points + 1)
+        weight = stock.risk_points
+        value = stock.momentum_value
+        
+        if weight <= capacity_points:
+            # Iterate backwards to ensure each stock can only be used once, as the 0/1 knapsack
+            for capacity in range(capacity_points, weight - 1, -1):
+                candidate_value = dp[capacity - weight] + value
+                if candidate_value > dp[capacity] + 1e-15:
+                    dp[capacity] = candidate_value
+                    row[capacity] = 1
+
+        keep_rows.append(row)
+
+    best_value = max(dp)
+    best_capacity = min(
+        capacity
+        for capacity, value in enumerate(dp)
+        if abs(value - best_value) <= 1e-12
+    )
+
+    selected_indices: List[int] = []
+    remaining_capacity = best_capacity
+    for index in range(len(candidates) - 1, -1, -1):
+        if keep_rows[index][remaining_capacity]:
+            selected_indices.append(index)
+            remaining_capacity -= candidates[index].risk_points
+
+    selected = [candidates[index] for index in reversed(selected_indices)]
+    total_risk = sum(stock.risk_points for stock in selected)
+    total_value = sum(stock.momentum_value for stock in selected)
+
+    return PortfolioResult(
+        selected=selected,
+        total_value=total_value,
+        total_risk_points=total_risk,
+        capacity_points=capacity_points,
+    )
