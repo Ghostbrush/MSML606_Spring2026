@@ -338,3 +338,74 @@ def solve_knapsack_greedy(
         total_risk_points=total_risk,
         capacity_points=capacity_points,
     )
+
+# Create basic summary statistics for the candidate stocks
+def summarize_candidates(candidates: Sequence[StockCandidate]) -> dict:
+    """
+    This function returns:
+    1. number of candidates
+    2. average momentum
+    3. average volatility
+    4. average risk points
+    """
+
+    if not candidates:
+        return {
+            "candidate_count": 0,
+            "average_momentum": 0.0,
+            "average_volatility": 0.0,
+            "average_risk_points": 0.0,
+        }
+
+    return {
+        "candidate_count": len(candidates),
+        "average_momentum": sum(stock.momentum_value for stock in candidates) / len(candidates),
+        "average_volatility": sum(stock.volatility_20d for stock in candidates) / len(candidates),
+        "average_risk_points": sum(stock.risk_points for stock in candidates) / len(candidates),
+    }
+
+# converts a portfolio into a list of dictionaries that display cleanly as a table
+def portfolio_to_rows(portfolio: PortfolioResult) -> List[dict]:
+    rows = []
+    for stock in portfolio.selected:
+        rows.append(
+            {
+                "Ticker": stock.ticker,
+                "Price": round(stock.price, 2),
+                "5-day return": stock.return_5d,
+                "20-day return": stock.return_20d,
+                "Momentum score": stock.momentum_value,
+                "20-day volatility": stock.volatility_20d,
+                "Risk points": stock.risk_points,
+                "Value per risk point": stock.value_to_risk,
+                "Next 20-day return": stock.future_return_20d,
+            }
+        )
+    return rows
+
+# Runs DP and greedy portfolios for several risk budgets, 
+# and compares their results in a list of dictionaries
+def compare_across_capacities(
+        candidates: Sequence[StockCandidate],
+        capacities: Iterable[int],
+    ) -> List[dict]:
+
+    rows = []
+    for capacity in capacities:
+        dp_result = solve_knapsack_dp(candidates, capacity)
+        greedy_result = solve_knapsack_greedy(candidates, capacity)
+        rows.append(
+            {
+                "Risk budget": capacity,
+                "DP stocks": len(dp_result.selected),
+                "DP risk used": dp_result.total_risk_points,
+                "DP momentum": dp_result.total_value,
+                "DP next 20-day avg return": dp_result.average_future_return,
+                "Greedy stocks": len(greedy_result.selected),
+                "Greedy risk used": greedy_result.total_risk_points,
+                "Greedy momentum": greedy_result.total_value,
+                "Greedy next 20-day avg return": greedy_result.average_future_return,
+                "DP momentum advantage": dp_result.total_value - greedy_result.total_value,
+            }
+        )
+    return rows
